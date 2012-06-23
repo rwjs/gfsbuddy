@@ -29,7 +29,7 @@
 #  empty, it will produce the relevant tape for the current date. STDIN can
 #  be forced by toggling the FORCE_STDIN flag. The format that is expected from
 #  STDIN is described by STDIN_FORMAT, the syntax of which is covered in 
-#  C89/ANSI C. More detail can be found at 
+#  the time libraries in C89/ANSI C. More detail can be found at 
 #  http://docs.python.org/library/datetime.html#strftime-and-strptime-behavior
 #  
 # AUTHOR
@@ -41,7 +41,7 @@
 #
 ###############################################################################
 
-import datetime
+from datetime import *
 import sys
 
 ################################## Variables ##################################
@@ -51,36 +51,58 @@ FORCE_STDIN = False
 
 ############################### Check functions ###############################
 
-# Financial Year (1 JUL -> 31 JUN); Australia/Egypt/Pakistan/New Zealand
-check_end_of_financial_year = lambda t: check_end_of_week(t) and t.month == 6 and (t + datetime.timedelta(weeks=1)).month == 7
-check_end_of_year = lambda t: check_end_of_week(t) and t.year != (t + datetime.timedelta(weeks=1)).year
-check_end_of_month = lambda t: check_end_of_week(t) and t.month != (t + datetime.timedelta(weeks=1)).month
-check_end_of_week = lambda t: t.weekday() == 4 # Friday 
-check_workday = lambda t: t.weekday() in (0,1,2,3,4) # Mon/Tue/Wed/Thurs/Fri
 #check_always_true = lambda t: True
+
+check_workday = lambda t: t.weekday() in (0,1,2,3,4) # Mon/Tue/Wed/Thurs/Fri
+check_last_workday_of_week = lambda t: t.weekday() == 4 # Friday 
+check_last_workday_of_month = lambda t: check_last_workday_of_week(t) and t.month != (t + timedelta(weeks=1)).month
+check_last_workday_of_year = lambda t: check_last_workday_of_week(t) and t.year != (t + timedelta(weeks=1)).year
+# Financial Year (1 JUL -> 31 JUN); Australia/Egypt/Pakistan/New Zealand
+check_last_workday_of_financial_year = lambda t: check_last_workday_of_week(t) and t.month == 6 and (t + timedelta(weeks=1)).month == 7
+
+check_last_day_of_week = lambda t: t.weekday() == 5 # Saturday (Sunday=6)
+check_last_day_of_month = lambda t: t.month != (t + timedelta(days=1)).month
+check_last_day_of_year = lambda t: t.year != (t + timedelta(days=1)).year
+check_last_day_of_financial_year = lambda t: t.month == 6 and (t + timedelta(days=1)) == 7
+
+check_first_day_of_week = lambda t: t.weekday() == 6 # Sunday
+check_first_day_of_month = lambda t: t.day == 1
+check_first_day_of_year = lambda t: t.day == 1 and t.month == 1
+check_first_day_of_financial_year = lambda t: t.day == 1 and t.month == 7
 
 ################################ Do functions #################################
 
-do_end_of_financial_year = lambda t: "End of Financial Year"
-do_end_of_year = lambda t: "End of Year"
-do_end_of_month = lambda t: "End of Month"
-do_end_of_week = lambda t: "Friday %s" % weekcount(t)
-do_workday = lambda t: convert_day_num(t.weekday())
 #do_always_true = lambda t: convert_day_num(t.weekday())
+
+do_workday = lambda t: convert_day_num(t.weekday())
+do_last_workday_of_week = lambda t: "Friday %s" % weekcount(t)
+do_last_workday_of_month = lambda t: "End of Month"
+do_last_workday_of_year = lambda t: "End of Year"
+do_last_workday_of_financial_year = lambda t: "End of Financial Year"
+
+do_last_day_of_week = lambda t: "Saturday %s" % weekcount(t)
+do_last_day_of_month = lambda t: "Last Day of Month"
+do_last_day_of_year = lambda t: "Last Day of Year"
+do_last_day_of_financial_year = lambda t: "Last Day of Financial Year"
+
+do_first_day_of_week = lambda t: "First Day of Week"
+do_first_day_of_month = lambda t: "First Day of Month"
+do_first_day_of_year = lambda t: "First Day of Year"
+do_first_day_of_financial_year = lambda t: "First Day of Financial Year"
 
 ##################################### Maps ####################################
 
-maps = (	( check_end_of_financial_year, do_end_of_financial_year ),
-		( check_end_of_year, do_end_of_year ),
-		( check_end_of_month, do_end_of_month ),
-		( check_end_of_week, do_end_of_week ),
+maps = (	( check_last_workday_of_financial_year, do_last_workday_of_financial_year ),
+		( check_last_workday_of_year, do_last_workday_of_year ),
+		( check_last_workday_of_month, do_last_workday_of_month ),
+		( check_last_workday_of_week, do_last_workday_of_week ),
 		( check_workday, do_workday ) )
 
 ############################## Helper functions ###############################
 
 def weekcount(day, count=1):
 	""" Get the week number for day. (Recursive)"""
-	lastweek = day - datetime.timedelta(weeks=1)
+	lastweek = day - timedelta(weeks=1)
 	if day.month != lastweek.month:
 		return count
 	else:
@@ -102,13 +124,14 @@ if FORCE_STDIN or not sys.stdin.isatty():
 	# read from STDIN
 	def reader():
 		for line in sys.stdin.readlines():
-			yield datetime.datetime.strptime(line.rstrip('\n'), STDIN_FORMAT)
+			yield datetime.strptime(line.rstrip('\n'), STDIN_FORMAT)
+			# strptime is a factory method for datetime() objects..
 else:
 	def reader():
-		yield datetime.datetime.now()
+		yield datetime.now()
 
 for line in reader():
 	for check, do in maps:
 		if check(line):
-			print do(line)
+			print line, do(line)
 			break
