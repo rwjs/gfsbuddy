@@ -133,5 +133,5 @@ else:
 for line in reader():
 	for check, do in maps:
 		if check(line):
-			print line, do(line)
+			print do(line)
 			break
