@@ -1,51 +1,61 @@
 #!/usr/bin/env python
 
-###############################################################################
-#
-# NAME
-# gfsbuddy
-#
-# SYNOPSIS
-# [PIPE] | gfsbuddy
-#
-# DESCRIPTION
-# This script is designed to help those running (manually-fed) tape archive 
-#  jobs on a "Grandfather-Father-Son" rotation schedule keep track of the 
-#  relevant tape for that day. It is written so that it can easily be modified 
-#  for a different rotation schedule, or any other similar use case (ie, 
-#  producing different outputs depending on time).
-#
-# DEVELOPERS NOTES
-# The crux of `gfsbuddy` is a pair of functions, and a 'map' to bind them
-#  together. The first function in the pair is the 'check' function, which 
-#  should return a boolean value indicating whether or not the day supplied 
-#  passes that check (for example, it might be checking if the day is a 
-#  Tuesday). The second function in the pair is the 'do' function, which returns 
-#  the string to display if its paired check has passed. The 'map' is ordered; 
-#  the first function-pair to pass a check has the output of its 'do' function
-#  displayed, and the program terminates. 
-#
-# The program can either read from STDIN (one date per line), or if STDIN is
-#  empty, it will produce the relevant tape for the current date. STDIN can
-#  be forced by toggling the FORCE_STDIN flag. The format that is expected from
-#  STDIN is described by STDIN_FORMAT, the syntax of which is covered in 
-#  the time libraries in C89/ANSI C. More detail can be found at 
-#  http://docs.python.org/library/datetime.html#strftime-and-strptime-behavior
-#  
-# AUTHOR
-# Written by Robert W.J. Stewart.
-#
-# TODO
-# * Add support for flags/options
-# * Add more check/do functions
-#
-###############################################################################
-
 from __future__ import print_function
 from datetime import *
 import sys
 import time
 import os
+import argparse
+
+__doc__ = """
+NAME
+	gfsbuddy
+
+SYNOPSIS
+	[PIPE] | gfsbuddy
+
+DESCRIPTION
+	This script is designed to help those running (manually-fed) tape archive
+	jobs on a "Grandfather-Father-Son" rotation schedule keep track of the
+	relevant tape for that day. It is written so that it can easily be modified
+	for a different rotation schedule, or any other similar use case (ie,
+	producing different outputs depending on time).
+
+ENVIRONMENT VARIABLES
+	STDIN_FORMAT
+		Specify the format (in strftime format) of the dates handed in via stdin.
+		Defaults to '%a %b %d %H:%M:%S %Z %Y'
+	FORCE_STDIN
+		If "true", "t", "yes", "y", or "1", force use of stdin as the format.
+		Otherwise, only use stdin if it appears to be open.
+		Defaults to 0 (False)
+
+MESSAGE NOTES:
+	The Message is formatted with strftime formats. Full information
+	for this can be found at < http://strftime.org/ >.
+	There is also an aditional extension; '%J' - the week number of month.
+
+DEVELOPERS NOTES
+	The crux of `gfsbuddy` is the TimeMap class. This takes;
+		1. A unique name (which doubles up as the command-line flag)
+		2. A message to show when the check matches - see MESSAGE NOTE
+		3. The function to determine if the program matches.
+			Takes one argument (the time to check, as a datetime object).
+		4. Whether or not to enable this check.
+			Defaults to False
+	The program can either read from STDIN (one date per line), or if STDIN is
+	empty, it will produce the relevant tape for the current date. STDIN can
+	be forced by toggling the FORCE_STDIN flag. The format that is expected from
+	STDIN is described by STDIN_FORMAT, the syntax of which is covered in
+	the time libraries in C89/ANSI C. More detail can be found at
+	http://docs.python.org/library/datetime.html#strftime-and-strptime-behavior
+
+AUTHOR
+	Written by Robert W.J. Stewart.
+
+TODO
+	* Add more check/do functions
+"""
 
 ################################## Variables ##################################
 
@@ -95,19 +105,20 @@ class TimeMap(object):
 
 ################################## Instances ##################################
 
-TimeMap('last_workday_of_financial_year','End of Financial Year',      lambda t: t.weekday() == 4 and t.month == 6 and (t + timedelta(weeks=1)).month == 7, True)
-TimeMap('last_workday_of_year',          'End of Year',                lambda t: t.weekday() == 4 and t.year != (t + timedelta(weeks=1)).year,              True)
-TimeMap('last_workday_of_month',         'End of Month',               lambda t: t.weekday() == 4 and t.month != (t + timedelta(weeks=1)).month,            True)
-TimeMap('last_workday_of_week',          'Friday %J',                  lambda t: t.weekday() == 4,                                                          True)
-TimeMap('workday',                       '%A',                         lambda t: t.weekday() in (0,1,2,3,4),                                                True)
-TimeMap('last_day_of_week',              'Last Day of Week',           lambda t: t.weekday() == 5)
-TimeMap('last_day_of_month',             'Last Day of Month',          lambda t: t.month != (t + timedelta(days=1)).month)
-TimeMap('last_day_of_year',              'Last Day of Year',           lambda t: t.year != (t + timedelta(days=1)).year)
-TimeMap('last_day_of_financial_year',    'Last Day of Financial Year', lambda t: t.month == 6 and (t + timedelta(days=1)) == 7)
-TimeMap('first_day_of_week',             'First Day of Week',          lambda t: t.weekday() == 6)
-TimeMap('first_day_of_month',            'First Day of Month',         lambda t: t.day == 1)
-TimeMap('first_day_of_year',             'First Day of Year',          lambda t: t.day == 1 and t.month == 1)
-TimeMap('first_day_of_financial_year',   'First Day of Financial Year',lambda t: t.day == 1 and t.month == 7)
+TimeMap('last-workday-of-financial-year','End of Financial Year',      lambda t: t.weekday() == 4 and t.month == 6 and (t + timedelta(weeks=1)).month == 7)
+TimeMap('last-workday-of-year',          'End of Year',                lambda t: t.weekday() == 4 and t.year != (t + timedelta(weeks=1)).year)
+TimeMap('last-workday-of-month',         'End of Month',               lambda t: t.weekday() == 4 and t.month != (t + timedelta(weeks=1)).month)
+TimeMap('last-workday-of-week',          '%A %J',                      lambda t: t.weekday() == 4)
+TimeMap('workday',                       '%A',                         lambda t: t.weekday() in (0,1,2,3,4))
+TimeMap('last-day-of-week',              'Last Day of Week',           lambda t: t.weekday() == 5)
+TimeMap('last-day-of-month',             'Last Day of Month',          lambda t: t.month != (t + timedelta(days=1)).month)
+TimeMap('last-day-of-year',              'Last Day of Year',           lambda t: t.year != (t + timedelta(days=1)).year)
+TimeMap('last-day-of-financial-year',    'Last Day of Financial Year', lambda t: t.month == 6 and (t + timedelta(days=1)) == 7)
+TimeMap('first-day-of-week',             'First Day of Week',          lambda t: t.weekday() == 6)
+TimeMap('first-day-of-month',            'First Day of Month',         lambda t: t.day == 1)
+TimeMap('first-day-of-year',             'First Day of Year',          lambda t: t.day == 1 and t.month == 1)
+TimeMap('first-day-of-financial-year',   'First Day of Financial Year',lambda t: t.day == 1 and t.month == 7)
+TimeMap('day',                           '%A',                         lambda t: True)
 
 ################################# Run program #################################
 
@@ -121,6 +132,34 @@ def reader():
 		yield datetime.now()
 
 if __name__ == '__main__':
+	# Legacy - enable workday for missing values
+	TimeMap.by_name('last-workday-of-financial-year').enabled = True
+	TimeMap.by_name('last-workday-of-year').enabled = True
+	TimeMap.by_name('last-workday-of-month').enabled = True
+	TimeMap.by_name('last-workday-of-week').enabled = True
+	TimeMap.by_name('workday').enabled = True
+
+	# Parse arguments
+	ap = argparse.ArgumentParser(argument_default=argparse.SUPPRESS, description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+	for inst in TimeMap.Instances:
+		ap.add_argument(
+			'--{}'.format(inst.name)
+			,nargs='?'
+			,type=str
+			,help='Enable this check.\n(Optionally) specify a strftime-formatted message to display.'
+			,metavar='STRFTIME-FORMATTED STRING'
+		)
+
+	args = ap.parse_args()
+	for key in vars(args):
+		tm = TimeMap.by_name(key)
+		if tm is None:
+			continue
+		tm.enabled = True
+		if getattr(args, key) is not None:
+			tm.message = getattr(args, key)
+
+	# Run
 	for line in reader():
 		for instance in TimeMap.Instances:
 			if instance(line):
