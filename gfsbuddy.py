@@ -44,6 +44,7 @@
 from __future__ import print_function
 from datetime import *
 import sys
+import time
 
 ################################## Variables ##################################
 
@@ -111,7 +112,8 @@ def weekcount(day, count=1):
 
 def convert_day_num(day_or_num):
 	""" Convert day number (zero-indexed) to name, and visa versa """
-	days = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+	#days = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+	days = [time.strftime('%A', time.gmtime(x*86400)) for x in range(-3,4)]
 	try:
 		# Try to convert number to day
 		return days[day_or_num]
