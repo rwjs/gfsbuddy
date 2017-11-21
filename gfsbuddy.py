@@ -29,6 +29,10 @@ ENVIRONMENT VARIABLES
 		If "true", "t", "yes", "y", or "1", force use of stdin as the format.
 		Otherwise, only use stdin if it appears to be open.
 		Defaults to 0 (False)
+	GFSBUDDY_WORKDAY
+		If "true", "t", "yes", "y", or "1", enable all workday-related flags.
+		This exists for legacy purposes.
+		Defaults to 1 (True)
 
 MESSAGE NOTES:
 	The Message is formatted with strftime formats. Full information
@@ -59,8 +63,9 @@ TODO
 
 ################################## Variables ##################################
 
-STDIN_FORMAT = os.environ.get('STDIN_FORMAT', '%a %b %d %H:%M:%S %Z %Y') # Default format of GNU/date in Linux.
-FORCE_STDIN  = str(os.environ.get('FORCE_STDIN', 0)) in ('true','t','yes','y','1')
+STDIN_FORMAT     = os.environ.get('STDIN_FORMAT', '%a %b %d %H:%M:%S %Z %Y') # Default format of GNU/date in Linux.
+FORCE_STDIN      = str(os.environ.get('FORCE_STDIN', 0)) in ('true','t','yes','y','1')
+GFSBUDDY_WORKDAY = str(os.environ.get('GFSBUDDY_WORKDAY', 1)) in ('true','t','yes','y','1')
 
 class TimeMap(object):
 	Instances = []
@@ -133,11 +138,12 @@ def reader():
 
 if __name__ == '__main__':
 	# Legacy - enable workday for missing values
-	TimeMap.by_name('last-workday-of-financial-year').enabled = True
-	TimeMap.by_name('last-workday-of-year').enabled = True
-	TimeMap.by_name('last-workday-of-month').enabled = True
-	TimeMap.by_name('last-workday-of-week').enabled = True
-	TimeMap.by_name('workday').enabled = True
+	if GFSBUDDY_WORKDAY:
+		TimeMap.by_name('last-workday-of-financial-year').enabled = True
+		TimeMap.by_name('last-workday-of-year').enabled = True
+		TimeMap.by_name('last-workday-of-month').enabled = True
+		TimeMap.by_name('last-workday-of-week').enabled = True
+		TimeMap.by_name('workday').enabled = True
 
 	# Parse arguments
 	ap = argparse.ArgumentParser(argument_default=argparse.SUPPRESS, description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
