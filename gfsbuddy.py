@@ -45,11 +45,12 @@ from __future__ import print_function
 from datetime import *
 import sys
 import time
+import os
 
 ################################## Variables ##################################
 
-STDIN_FORMAT = '%a %b %d %H:%M:%S %Z %Y' # Default format of GNU/date in Linux. 
-FORCE_STDIN = False
+STDIN_FORMAT = os.environ.get('STDIN_FORMAT', '%a %b %d %H:%M:%S %Z %Y') # Default format of GNU/date in Linux.
+FORCE_STDIN  = str(os.environ.get('FORCE_STDIN', 0)) in ('true','t','yes','y','1')
 
 class TimeMap(object):
 	Instances = []
