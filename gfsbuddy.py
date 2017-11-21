@@ -120,7 +120,8 @@ def reader():
 	else:
 		yield datetime.now()
 
-for line in reader():
-	for instance in TimeMap.Instances:
-		if instance(line):
-			break
+if __name__ == '__main__':
+	for line in reader():
+		for instance in TimeMap.Instances:
+			if instance(line):
+				break
