@@ -12,7 +12,7 @@ NAME
 	gfsbuddy
 
 SYNOPSIS
-	[PIPE] | gfsbuddy
+	[PIPE] | gfsbuddy [OPTIONS]
 
 DESCRIPTION
 	This script is designed to help those running (manually-fed) tape archive
@@ -20,6 +20,11 @@ DESCRIPTION
 	relevant tape for that day. It is written so that it can easily be modified
 	for a different rotation schedule, or any other similar use case (ie,
 	producing different outputs depending on time).
+
+OPTIONS
+	Checks are performed strictly in the order supplied by command line;
+	if multiple checks are found true, the first one will be returned (
+	or all if `--all` is specified).
 
 ENVIRONMENT VARIABLES
 	STDIN_FORMAT
@@ -99,6 +104,13 @@ class TimeMap(object):
 			return True
 		return False
 
+	def enable(self, to_front=True):
+		""" Enable and push to front of queue """
+		self.enabled = True
+		if to_front:
+			self.__class__.Instances.remove(self)
+			self.__class__.Instances.insert(0, self)
+
 	def __str__(self):
 		return self.name
 
@@ -107,6 +119,14 @@ class TimeMap(object):
 		for instance in cls.Instances:
 			if instance.name == name:
 				return instance
+
+class OrderedNamespace(argparse.Namespace):
+	def __init__(self, **kwargs):
+		self.__dict__['order'] = []
+		super(OrderedNamespace, self).__init__(**kwargs)
+	def __setattr__(self,attr,value):
+		self.__dict__['order'].append(attr)
+		super(OrderedNamespace, self).__setattr__(attr, value)
 
 ################################## Instances ##################################
 
@@ -147,6 +167,7 @@ if __name__ == '__main__':
 
 	# Parse arguments
 	ap = argparse.ArgumentParser(argument_default=argparse.SUPPRESS, description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+	ap.add_argument('--all', action='store_true')
 	for inst in TimeMap.Instances:
 		ap.add_argument(
 			'--{}'.format(inst.name)
@@ -156,12 +177,12 @@ if __name__ == '__main__':
 			,metavar='STRFTIME-FORMATTED STRING'
 		)
 
-	args = ap.parse_args()
+	args = ap.parse_args(None, OrderedNamespace())
 	for key in vars(args):
-		tm = TimeMap.by_name(key)
+		tm = TimeMap.by_name(key.replace('_', '-'))
 		if tm is None:
 			continue
-		tm.enabled = True
+		tm.enable(True) # enable and push to front
 		if getattr(args, key) is not None:
 			tm.message = getattr(args, key)
 
@@ -169,4 +190,5 @@ if __name__ == '__main__':
 	for line in reader():
 		for instance in TimeMap.Instances:
 			if instance(line):
-				break
+				if not getattr(ap.parse_args(), 'all', False):
+					break
