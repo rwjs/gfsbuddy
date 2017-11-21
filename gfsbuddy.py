@@ -92,16 +92,6 @@ class TimeMap(object):
 			if instance.name == name:
 				return instance
 
-def convert_day_num(day_or_num):
-	""" Convert day number (zero-indexed) to name, and visa versa """
-	days = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
-	try:
-		# Try to convert number to day
-		return days[day_or_num]
-	except TypeError:
-		# Try to convert day to number
-		return days.index(day_or_num)
-
 ################################## Instances ##################################
 
 TimeMap('last_workday_of_financial_year','End of Financial Year',      lambda t: t.weekday() == 4 and t.month == 6 and (t + timedelta(weeks=1)).month == 7, True)
