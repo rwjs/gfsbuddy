@@ -41,6 +41,7 @@
 #
 ###############################################################################
 
+from __future__ import print_function
 from datetime import *
 import sys
 
@@ -133,5 +134,5 @@ else:
 for line in reader():
 	for check, do in maps:
 		if check(line):
-			print do(line)
+			print(do(line))
 			break
