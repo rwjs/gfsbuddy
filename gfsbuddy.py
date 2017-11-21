@@ -51,75 +51,72 @@ import time
 STDIN_FORMAT = '%a %b %d %H:%M:%S %Z %Y' # Default format of GNU/date in Linux. 
 FORCE_STDIN = False
 
-############################### Check functions ###############################
+class TimeMap(object):
+	Instances = []
+	def __init__(self, name, message, check, enabled=False):
+		assert hasattr(check, '__call__'), 'check must be callable for TimeMap()'
+		self.name = name
+		self.message = message
+		self.check = check
+		self.enabled = enabled
+		for idx,inst in enumerate(self.__class__.Instances):
+			if inst.name == name:
+				self.__class__.Instances[idx] = self
+				break
+		else:
+			self.__class__.Instances.append(self)
 
-#check_always_true = lambda t: True
+	def __del__(self):
+		self.__class__.Instances.pop(self.__class__.Instances.index(self))
 
-check_workday = lambda t: t.weekday() in (0,1,2,3,4) # Mon/Tue/Wed/Thurs/Fri
-check_last_workday_of_week = lambda t: t.weekday() == 4 # Friday 
-check_last_workday_of_month = lambda t: check_last_workday_of_week(t) and t.month != (t + timedelta(weeks=1)).month
-check_last_workday_of_year = lambda t: check_last_workday_of_week(t) and t.year != (t + timedelta(weeks=1)).year
-# Financial Year (1 JUL -> 31 JUN); Australia/Egypt/Pakistan/New Zealand
-check_last_workday_of_financial_year = lambda t: check_last_workday_of_week(t) and t.month == 6 and (t + timedelta(weeks=1)).month == 7
+	def __call__(self, val):
+		if not self.enabled:
+			return False
+		elif self.check(val):
+			if hasattr(self.message , '__call__'):
+				print(self.message(val))
+			elif type(self.message) == str:
+				message = self.message.replace('%J', str(len([x for x in range(0,5) if val.month == (val - timedelta(weeks=x)).month]))) if '%J' in self.message else self.message
+				print(val.strftime(message))
+			else:
+				print(self.message)
+			return True
+		return False
 
-check_last_day_of_week = lambda t: t.weekday() == 5 # Saturday (Sunday=6)
-check_last_day_of_month = lambda t: t.month != (t + timedelta(days=1)).month
-check_last_day_of_year = lambda t: t.year != (t + timedelta(days=1)).year
-check_last_day_of_financial_year = lambda t: t.month == 6 and (t + timedelta(days=1)) == 7
+	def __str__(self):
+		return self.name
 
-check_first_day_of_week = lambda t: t.weekday() == 6 # Sunday
-check_first_day_of_month = lambda t: t.day == 1
-check_first_day_of_year = lambda t: t.day == 1 and t.month == 1
-check_first_day_of_financial_year = lambda t: t.day == 1 and t.month == 7
-
-################################ Do functions #################################
-
-#do_always_true = lambda t: convert_day_num(t.weekday())
-
-do_workday = lambda t: convert_day_num(t.weekday())
-do_last_workday_of_week = lambda t: "Friday %s" % weekcount(t)
-do_last_workday_of_month = lambda t: "End of Month"
-do_last_workday_of_year = lambda t: "End of Year"
-do_last_workday_of_financial_year = lambda t: "End of Financial Year"
-
-do_last_day_of_week = lambda t: "Saturday %s" % weekcount(t)
-do_last_day_of_month = lambda t: "Last Day of Month"
-do_last_day_of_year = lambda t: "Last Day of Year"
-do_last_day_of_financial_year = lambda t: "Last Day of Financial Year"
-
-do_first_day_of_week = lambda t: "First Day of Week"
-do_first_day_of_month = lambda t: "First Day of Month"
-do_first_day_of_year = lambda t: "First Day of Year"
-do_first_day_of_financial_year = lambda t: "First Day of Financial Year"
-
-##################################### Maps ####################################
-
-maps = (	( check_last_workday_of_financial_year, do_last_workday_of_financial_year ),
-		( check_last_workday_of_year, do_last_workday_of_year ),
-		( check_last_workday_of_month, do_last_workday_of_month ),
-		( check_last_workday_of_week, do_last_workday_of_week ),
-		( check_workday, do_workday ) )
-
-############################## Helper functions ###############################
-
-def weekcount(day, count=1):
-	""" Get the week number for day. (Recursive)"""
-	lastweek = day - timedelta(weeks=1)
-	if day.month != lastweek.month:
-		return count
-	else:
-		return weekcount(lastweek, count+1)
+	@classmethod
+	def by_name(cls, name):
+		for instance in cls.Instances:
+			if instance.name == name:
+				return instance
 
 def convert_day_num(day_or_num):
 	""" Convert day number (zero-indexed) to name, and visa versa """
-	#days = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-	days = [time.strftime('%A', time.gmtime(x*86400)) for x in range(-3,4)]
+	days = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
 	try:
 		# Try to convert number to day
 		return days[day_or_num]
 	except TypeError:
 		# Try to convert day to number
 		return days.index(day_or_num)
+
+################################## Instances ##################################
+
+TimeMap('last_workday_of_financial_year','End of Financial Year',      lambda t: t.weekday() == 4 and t.month == 6 and (t + timedelta(weeks=1)).month == 7, True)
+TimeMap('last_workday_of_year',          'End of Year',                lambda t: t.weekday() == 4 and t.year != (t + timedelta(weeks=1)).year,              True)
+TimeMap('last_workday_of_month',         'End of Month',               lambda t: t.weekday() == 4 and t.month != (t + timedelta(weeks=1)).month,            True)
+TimeMap('last_workday_of_week',          'Friday %J',                  lambda t: t.weekday() == 4,                                                          True)
+TimeMap('workday',                       '%A',                         lambda t: t.weekday() in (0,1,2,3,4),                                                True)
+TimeMap('last_day_of_week',              'Last Day of Week',           lambda t: t.weekday() == 5)
+TimeMap('last_day_of_month',             'Last Day of Month',          lambda t: t.month != (t + timedelta(days=1)).month)
+TimeMap('last_day_of_year',              'Last Day of Year',           lambda t: t.year != (t + timedelta(days=1)).year)
+TimeMap('last_day_of_financial_year',    'Last Day of Financial Year', lambda t: t.month == 6 and (t + timedelta(days=1)) == 7)
+TimeMap('first_day_of_week',             'First Day of Week',          lambda t: t.weekday() == 6)
+TimeMap('first_day_of_month',            'First Day of Month',         lambda t: t.day == 1)
+TimeMap('first_day_of_year',             'First Day of Year',          lambda t: t.day == 1 and t.month == 1)
+TimeMap('first_day_of_financial_year',   'First Day of Financial Year',lambda t: t.day == 1 and t.month == 7)
 
 ################################# Run program #################################
 
@@ -134,7 +131,6 @@ else:
 		yield datetime.now()
 
 for line in reader():
-	for check, do in maps:
-		if check(line):
-			print(do(line))
+	for instance in TimeMap.Instances:
+		if instance(line):
 			break
