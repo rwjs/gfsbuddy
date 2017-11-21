@@ -111,14 +111,13 @@ TimeMap('first_day_of_financial_year',   'First Day of Financial Year',lambda t:
 
 ################################# Run program #################################
 
-if FORCE_STDIN or not sys.stdin.isatty():
-	# read from STDIN
-	def reader():
+def reader():
+	if FORCE_STDIN or not sys.stdin.isatty():
+		# read from STDIN
 		for line in sys.stdin.readlines():
 			yield datetime.strptime(line.rstrip('\n'), STDIN_FORMAT)
 			# strptime is a factory method for datetime() objects..
-else:
-	def reader():
+	else:
 		yield datetime.now()
 
 for line in reader():
