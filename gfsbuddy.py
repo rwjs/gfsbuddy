@@ -144,7 +144,7 @@ TimeMap('first-day-of-month',            'First Day of Month',         lambda t:
 TimeMap('first-day-of-year',             'First Day of Year',          lambda t: t.day == 1 and t.month == 1)
 TimeMap('first-day-of-financial-year',   'First Day of Financial Year',lambda t: t.day == 1 and t.month == 7)
 TimeMap('monday',                        '%A',                         lambda t: t.weekday() == 0)
-TimeMap('tueday',                        '%A',                         lambda t: t.weekday() == 1)
+TimeMap('tuesday',                       '%A',                         lambda t: t.weekday() == 1)
 TimeMap('wednesday',                     '%A',                         lambda t: t.weekday() == 2)
 TimeMap('thursday',                      '%A',                         lambda t: t.weekday() == 3)
 TimeMap('friday',                        '%A',                         lambda t: t.weekday() == 4)
